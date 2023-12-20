@@ -65,12 +65,14 @@ export function CreateButton(props: CreateBtnProps) {
     function setParamsIfDefined(key: string, value: string | number | boolean | null | undefined) {
       if (value !== undefined && value !== null) _searchParams.set(key, value.toString());
     }
-    setParamsIfDefined("dialog", "new");
+    // setParamsIfDefined("dialog", "new");
+    setParamsIfDefined("dialogexit", "exit");
     setParamsIfDefined("eventPage", option.slug);
     setParamsIfDefined("teamId", option.teamId);
     if (!option.teamId) {
       _searchParams.delete("teamId");
     }
+    console.log("hi");
     router.push(`${pathname}?${_searchParams.toString()}`);
   };
 
@@ -138,6 +140,7 @@ export function CreateButton(props: CreateBtnProps) {
         </Dropdown>
       )}
       {searchParams?.get("dialog") === "new" && CreateDialog}
+      {searchParams?.get("dialogexit") === "new" && CreateDialog}
     </>
   );
 }

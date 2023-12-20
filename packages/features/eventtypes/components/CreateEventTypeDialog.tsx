@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { isValidPhoneNumber } from "libphonenumber-js";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -9,6 +9,7 @@ import { z } from "zod";
 import { useOrgBranding } from "@calcom/features/ee/organizations/context/provider";
 import { useFlagMap } from "@calcom/features/flags/context/provider";
 import { classNames } from "@calcom/lib";
+import { useCompatSearchParams } from "@calcom/lib/hooks/useCompatSearchParams";
 import { useLocale } from "@calcom/lib/hooks/useLocale";
 import { useTypedQuery } from "@calcom/lib/hooks/useTypedQuery";
 import { HttpError } from "@calcom/lib/http-error";
@@ -92,8 +93,12 @@ export default function CreateEventTypeDialog({
 
   const form = useForm<z.infer<typeof createEventTypeInput>>({
     defaultValues: {
+      title: "",
+      description: "",
+      slug: "",
+      metadata: null,
       length: 15,
-    },
+    } satisfies z.infer<typeof createEventTypeInput>,
     resolver: zodResolver(createEventTypeInput),
   });
 
@@ -108,7 +113,7 @@ export default function CreateEventTypeDialog({
     }
   }, [schedulingTypeWatch]);
 
-  const { register } = form;
+  const { register, formState } = form;
 
   const isAdmin =
     teamId !== undefined &&
@@ -148,6 +153,30 @@ export default function CreateEventTypeDialog({
   const flags = useFlagMap();
   const urlPrefix = orgBranding?.fullDomain ?? process.env.NEXT_PUBLIC_WEBSITE_URL;
 
+  console.log(formState.dirtyFields, formState.isDirty);
+  const searchParams = useCompatSearchParams();
+  const pathname = usePathname();
+
+  const onDialogClose = (event) => {
+    event.preventDefault();
+    formState.isDirty ? console.log("Dirty exit with interact outside") : console.log("not sure");
+    if (formState.isDirty) {
+      ExitCreateEventTypeDialogWarning();
+    }
+    // const CreateDialog = createDialog ? createDialog() : null;
+
+    // inject selection data into url for correct router history
+    const _searchParams = new URLSearchParams(searchParams ?? undefined);
+    function setParamsIfDefined(key: string, value: string | number | boolean | null | undefined) {
+      if (value !== undefined && value !== null) _searchParams.set(key, value.toString());
+    }
+    setParamsIfDefined("dialogexit", "exit");
+    // setParamsIfDefined("eventPage", option.slug);
+    // setParamsIfDefined("teamId", option.teamId);
+    router.push(`${pathname}?${_searchParams.toString()}`);
+  };
+
+  const createDialog = () => <ExitCreateEventTypeDialogWarning />;
   return (
     <Dialog
       name="new"
@@ -162,6 +191,9 @@ export default function CreateEventTypeDialog({
         "locations",
       ]}>
       <DialogContent
+        onEscapeKeyDown={() => (formState.isDirty ? console.log("are you sure to exit?") : "not sure")}
+        // onPointerDownOutside={() => (formState.isDirty ? console.log("are you sure to exit?") : "not sure")}
+        onInteractOutside={(e) => onDialogClose(e)}
         type="creation"
         enableOverflow
         title={teamId ? t("add_new_team_event_type") : t("add_new_event_type")}
@@ -185,9 +217,9 @@ export default function CreateEventTypeDialog({
               placeholder={t("quick_chat")}
               {...register("title")}
               onChange={(e) => {
-                form.setValue("title", e?.target.value);
+                form.setValue("title", e?.target.value, { shouldDirty: true });
                 if (form.formState.touchedFields["slug"] === undefined) {
-                  form.setValue("slug", slugify(e?.target.value));
+                  form.setValue("slug", slugify(e?.target.value), { shouldDirty: true });
                 }
               }}
             />
@@ -200,7 +232,7 @@ export default function CreateEventTypeDialog({
                   addOnLeading={<>/{!isManagedEventType ? pageSlug : t("username_placeholder")}/</>}
                   {...register("slug")}
                   onChange={(e) => {
-                    form.setValue("slug", slugify(e?.target.value), { shouldTouch: true });
+                    form.setValue("slug", slugify(e?.target.value), { shouldTouch: true, shouldDirty: true });
                   }}
                 />
 
@@ -229,7 +261,9 @@ export default function CreateEventTypeDialog({
               <>
                 <Editor
                   getText={() => md.render(form.getValues("description") || "")}
-                  setText={(value: string) => form.setValue("description", turndown(value))}
+                  setText={(value: string) =>
+                    form.setValue("description", turndown(value), { shouldDirty: true })
+                  }
                   excludedToolbarItems={["blockType", "link"]}
                   placeholder={t("quick_video_meeting")}
                   firstRender={firstRender}
@@ -311,6 +345,27 @@ export default function CreateEventTypeDialog({
           </DialogFooter>
         </Form>
       </DialogContent>
+      {searchParams?.get("dialogexit") === "exit" && createDialog}
     </Dialog>
   );
 }
+
+export const ExitCreateEventTypeDialogWarning = () => {
+  console.log("ExitCreateEventTypeDialogWarning called");
+  return (
+    <Dialog name="exit">
+      <DialogContent
+        type="confirmation"
+        title="Are you sure to exit"
+        description="Are you sure you want to leave? Your changes will be lost if you leave this page."
+      />
+      <DialogFooter showDivider>
+        <DialogClose />
+        <DialogClose />
+        {/* <Button type="submit" loading={createMutation.isLoading}> */}
+        {/*   {t("continue")} */}
+        {/* </Button> */}
+      </DialogFooter>
+    </Dialog>
+  );
+};

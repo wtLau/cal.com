@@ -13,8 +13,10 @@ import { getLayout } from "@calcom/features/MainLayout";
 import { useOrgBranding } from "@calcom/features/ee/organizations/context/provider";
 import useIntercom from "@calcom/features/ee/support/lib/intercom/useIntercom";
 import { EventTypeEmbedButton, EventTypeEmbedDialog } from "@calcom/features/embed/EventTypeEmbed";
-import { EventTypeDescription } from "@calcom/features/eventtypes/components";
-import CreateEventTypeDialog from "@calcom/features/eventtypes/components/CreateEventTypeDialog";
+import {
+  EventTypeDescription,
+  ExitCreateEventTypeDialogWarning,
+} from "@calcom/features/eventtypes/components";
 import { DuplicateDialog } from "@calcom/features/eventtypes/components/DuplicateDialog";
 import { TeamsFilter } from "@calcom/features/filters/components/TeamsFilter";
 import { getTeamsFiltersFromQuery } from "@calcom/features/filters/lib/getTeamsFiltersFromQuery";
@@ -800,7 +802,8 @@ const CTA = ({ data }: { data: GetByViewerResponse }) => {
       data-testid="new-event-type"
       subtitle={t("create_event_on").toUpperCase()}
       options={profileOptions}
-      createDialog={() => <CreateEventTypeDialog profileOptions={profileOptions} />}
+      // createDialog={() => <CreateEventTypeDialog profileOptions={profileOptions} />}
+      createDialog={() => <ExitCreateEventTypeDialogWarning />}
     />
   );
 };
